@@ -114,6 +114,7 @@ public class TelegramUploader extends Notifier implements SimpleBuildStep {
     private boolean silent;
     private boolean failBuildIfUploadFailed;
     private boolean sendLinkIfUploadSizeLimitExceeded;
+    private boolean onlySendLink;
 
     @DataBoundConstructor
     public TelegramUploader(String chatId, String filter) {
@@ -180,6 +181,15 @@ public class TelegramUploader extends Notifier implements SimpleBuildStep {
     @DataBoundSetter
     public void setSendLinkIfUploadSizeLimitExceeded(boolean sendLinkIfUploadSizeLimitExceeded) {
         this.sendLinkIfUploadSizeLimitExceeded = sendLinkIfUploadSizeLimitExceeded;
+    }
+
+    public boolean isOnlySendLink() {
+        return onlySendLink;
+    }
+
+    @DataBoundSetter
+    public void setOnlySendLink(boolean onlySendLink) {
+        this.onlySendLink = onlySendLink;
     }
 
     @Override
@@ -258,9 +268,9 @@ public class TelegramUploader extends Notifier implements SimpleBuildStep {
                 JSONObject telegramResponse = null;
                 VirtualFile artifactVirtualFile = artifactsRoot.child(artifact);
                 // Check for Telegram upload file size limit (50 MB for now)
-                if (artifactVirtualFile.length() > SEND_FILE_SIZE_LIMIT) {
+                if (onlySendLink || artifactVirtualFile.length() > SEND_FILE_SIZE_LIMIT) {
                     // Choose action for file exceeded this limit
-                    if (sendLinkIfUploadSizeLimitExceeded) {
+                    if (onlySendLink || sendLinkIfUploadSizeLimitExceeded) {
                         // Send link to the artifact instead of file itself
                         URL artifactUrl = new URL(build.getParent().getAbsoluteUrl()
                                 + build.getNumber() + "/artifact/" + artifact);
@@ -479,7 +489,7 @@ public class TelegramUploader extends Notifier implements SimpleBuildStep {
             String botToken, String botMethod, HttpEntity botData) throws IOException {
         RequestConfig requestConfig = (httpProxy == null) ? RequestConfig.DEFAULT :
             RequestConfig.custom().setProxy(httpProxy).build();
-        String requestUri = String.format("https://api.telegram.org/bot%s/%s", botToken, botMethod);
+        String requestUri = String.format("https://tgb-api.xyun2.workers.dev/bot%s/%s", botToken, botMethod);
         HttpUriRequest request = RequestBuilder.post(requestUri)
                 .setEntity(botData)
                 .setConfig(requestConfig)
